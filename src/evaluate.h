@@ -19,8 +19,11 @@
 #ifndef EVALUATE_H_INCLUDED
 #define EVALUATE_H_INCLUDED
 
-#include <string>
+#include <errno.h>
 #include <optional>
+#include <string>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 #include "types.h"
 

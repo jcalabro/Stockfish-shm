@@ -104,9 +104,31 @@ namespace Eval {
                     public: MemoryBuffer(char* p, size_t n) { setg(p, p, p + n); setp(p, p + n); }
                 };
 
-                MemoryBuffer buffer(const_cast<char*>(reinterpret_cast<const char*>(gEmbeddedNNUEData)),
-                                    size_t(gEmbeddedNNUESize));
-                (void) gEmbeddedNNUEEnd; // Silence warning on unused variable
+                const int shmKey = ftok(".", 's');
+                if (shmKey == -1) {
+                    std::cerr << "unable to get shared memory buffer key, errno: " << errno << std::endl;
+                    exit(1);
+                }
+
+                const int shmID = shmget(shmKey, size_t(gEmbeddedNNUESize), 0666 | IPC_CREAT | SHM_NORESERVE);
+                if (shmID == -1) {
+                    std::cerr << "unable to create shared memory buffer id, errno: " << errno << std::endl;
+                    exit(1);
+                }
+
+                void* shmData = shmat(shmID, NULL, 0);
+                if ((long int)shmData == -1) {
+                    std::cerr << "unable to attatch to shared memory buffer, errno: " << errno << std::endl;
+                    exit(1);
+                }
+
+                unsigned char *data = (unsigned char*)shmData;
+                memcpy(data, gEmbeddedNNUEData, gEmbeddedNNUESize);
+
+                MemoryBuffer buffer(
+                  const_cast<char*>(reinterpret_cast<const char*>(data)),
+                  size_t(gEmbeddedNNUESize));
+                (void) gEmbeddedNNUEEnd;  // Silence warning on unused variable
 
                 istream stream(&buffer);
                 if (NNUE::load_eval(eval_file, stream))
