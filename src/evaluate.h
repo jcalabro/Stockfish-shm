@@ -20,10 +20,13 @@
 #define EVALUATE_H_INCLUDED
 
 #include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+
 #include <optional>
 #include <string>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 
 #include "types.h"
 

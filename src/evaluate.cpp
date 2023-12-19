@@ -104,25 +104,24 @@ namespace Eval {
                     public: MemoryBuffer(char* p, size_t n) { setg(p, p, p + n); setp(p, p + n); }
                 };
 
-                const int shmKey = ftok(".", 's');
-                if (shmKey == -1) {
-                    std::cerr << "unable to get shared memory buffer key, errno: " << errno << std::endl;
+                const int sharedFD = shm_open("stockfish_nnue_shm", O_RDWR | O_CREAT, 0666);
+                if (sharedFD == -1) {
+                    std::cerr << "shm_open error, errno: " << errno << std::endl;
                     exit(1);
                 }
 
-                const int shmID = shmget(shmKey, size_t(gEmbeddedNNUESize), 0666 | IPC_CREAT | SHM_NORESERVE);
-                if (shmID == -1) {
-                    std::cerr << "unable to create shared memory buffer id, errno: " << errno << std::endl;
+                const int truncateRes = ftruncate(sharedFD, gEmbeddedNNUESize);
+                if (truncateRes == -1) {
+                    std::cerr << "ftruncate error, errno: " << errno << std::endl;
                     exit(1);
                 }
 
-                void* shmData = shmat(shmID, NULL, 0);
-                if ((long int)shmData == -1) {
-                    std::cerr << "unable to attatch to shared memory buffer, errno: " << errno << std::endl;
+                unsigned char* data = (unsigned char*)mmap(NULL, gEmbeddedNNUESize, PROT_READ|PROT_WRITE, MAP_SHARED, sharedFD, 0);
+                if ((long int)data == -1) {
+                    std::cerr << "mmap error, errno: " << errno << std::endl;
                     exit(1);
                 }
 
-                unsigned char *data = (unsigned char*)shmData;
                 memcpy(data, gEmbeddedNNUEData, gEmbeddedNNUESize);
 
                 MemoryBuffer buffer(
